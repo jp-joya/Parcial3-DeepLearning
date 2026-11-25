@@ -1,0 +1,49 @@
+{
+  "name": "smoke",
+  "seed": 42,
+  "dev_subjects": [
+    5,
+    16,
+    21,
+    28,
+    30
+  ],
+  "architectures": [
+    "rnn",
+    "lstm",
+    "cnn_lstm"
+  ],
+  "trials": 1,
+  "max_epochs": 2,
+  "patience": 2,
+  "min_delta": 0.0001,
+  "final_seeds": [
+    101
+  ],
+  "batch_size": 128,
+  "threads": 2,
+  "search_fraction": 0.7,
+  "debug_limit_per_split": 192,
+  "space": {
+    "window": [
+      64
+    ],
+    "hidden": [
+      16
+    ],
+    "dropout": [
+      0.25
+    ],
+    "lr": [
+      0.001
+    ],
+    "weight_decay": [
+      0.0001
+    ]
+  },
+  "fixed": {
+    "layers": 1,
+    "conv_channels": 16,
+    "kernel": 5
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "name": "overnight",
+  "seed": 42,
+  "dev_subjects": [
+    5,
+    16,
+    21,
+    28,
+    30
+  ],
+  "architectures": [
+    "rnn",
+    "lstm",
+    "cnn_lstm"
+  ],
+  "trials": 16,
+  "max_epochs": 60,
+  "patience": 10,
+  "min_delta": 0.0001,
+  "final_seeds": [
+    101,
+    202,
+    303
+  ],
+  "batch_size": 128,
+  "threads": 4,
+  "search_fraction": 0.7,
+  "space": {
+    "window": [
+      64,
+      128
+    ],
+    "hidden": [
+      32,
+      64,
+      128
+    ],
+    "dropout": [
+      0.0,
+      0.25,
+      0.5
+    ],
+    "lr": [
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "weight_decay": [
+      0.0,
+      0.0001,
+      0.001
+    ]
+  },
+  "fixed": {
+    "layers": 1,
+    "conv_channels": 32,
+    "kernel": 5
+  }
+}

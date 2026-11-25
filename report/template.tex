@@ -1,0 +1,67 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+\input{values.tex}
+\title{Comparación de RNN, LSTM y CNN--LSTM para reconocimiento de actividades con UCI HAR}
+\author{\IEEEauthorblockN{Nombre del estudiante}
+\IEEEauthorblockA{Universidad -- Curso de Deep Learning}}
+\begin{document}
+\maketitle
+\begin{abstract}
+Se comparan tres arquitecturas recurrentes para clasificar seis actividades a partir de señales inerciales de UCI HAR. Se separan los sujetos entre entrenamiento, validación y prueba, y se seleccionan los hiperparámetros mediante F1 macro de validación. Se evalúan \Trials{} configuraciones comunes por arquitectura y \Seeds{} semillas nuevas para cada configuración seleccionada. Entre las arquitecturas neuronales, el modelo recomendado por validación es \Winner{}, con F1 macro de \WinnerDev\% en validación y \WinnerTest\% en prueba. Se incluyen referencias simples y análisis de errores. Estado: \RunLabel.
+\end{abstract}
+\begin{IEEEkeywords}
+reconocimiento de actividades, RNN, LSTM, convolución 1D, evaluación por sujeto
+\end{IEEEkeywords}
+
+\section{Problema y datos}
+El objetivo es determinar qué arquitectura generaliza mejor a personas no observadas, sin asumir una superioridad previa de CNN--LSTM. UCI HAR contiene señales de acelerómetro y giroscopio de 30 voluntarios, registradas a 50 Hz para seis actividades\cite{har}. Se utilizan los nueve canales temporales de \texttt{Inertial Signals}, preprocesados por los autores, sin el vector de 561 características. Las ventanas originales contienen 128 muestras y se solapan un 50\%.
+
+Se conserva la prueba oficial de nueve sujetos. Del entrenamiento oficial se reservan para validación los sujetos \DevSubjectList. Quedan \TrainN{} ventanas de \TrainSubjects{} sujetos para entrenamiento, \DevN{} de \DevSubjects{} para validación y \TestN{} para prueba. Ningún sujeto aparece en dos particiones. La media y desviación por canal se ajustan exclusivamente en entrenamiento. Las ventanas de 64 muestras corresponden al sufijo de las originales: cambian el contexto disponible de 2.56 a 1.28 s; no representan una nueva segmentación de señales continuas.
+
+\section{Protocolo experimental}
+Siguiendo a Ng\cite{ng}, se fija F1 macro como métrica principal:
+$F_{1,\mathrm{macro}}=\frac{1}{6}\sum_{c=1}^{6}2P_cR_c/(P_c+R_c)$,
+con aporte cero cuando el denominador es cero. Accuracy es secundaria. Las referencias son la clase mayoritaria y una regresión logística sobre media, desviación, mínimo y máximo de cada canal (36 atributos, ventana completa), escalados con entrenamiento. Esta última evalúa cuánto aporta el modelado temporal frente a estadísticas sencillas; no comparte necesariamente el contexto de un modelo con ventana de 64 muestras.
+
+RNN y LSTM usan una capa recurrente y una salida lineal de seis logits a partir del último estado oculto. CNN--LSTM antepone Conv1D, ReLU, MaxPool y dropout a la LSTM. Se aplica dropout a la representación final en las tres arquitecturas. El número de parámetros difiere: se comparan sistemas ajustados bajo un protocolo común, no capacidades idénticas.
+
+Se usa búsqueda aleatoria reproducible de \PlannedTrials{} configuraciones, compartidas por las arquitecturas, sobre longitud, unidades, dropout, tasa de aprendizaje y penalización L2 desacoplada de AdamW. Solo \Trials{} configuraciones completadas por las tres participan en la selección. \SearchNote{} Se utiliza entropía cruzada, batch \BatchSize{}, recorte de norma del gradiente a 1 y un máximo de \Epochs{} épocas con paciencia \Patience{}. Se restaura la época con mayor F1 macro de validación. Las configuraciones ganadoras se entrenan con \Seeds{} semillas nuevas; test se consulta después de fijar todos esos modelos. No se reentrena con validación ni se elige la mejor semilla usando test.
+
+\begin{table}[t]
+\caption{Configuraciones seleccionadas por validación. $T$: longitud, $h$: unidades, $p$: dropout, $\eta$: aprendizaje, $\lambda$: weight decay.}
+\centering\scriptsize
+\input{hyperparameters_table.tex}
+\end{table}
+
+\section{Resultados y diagnóstico}
+La Tabla~\ref{tab:results} presenta media y desviación estándar muestral entre semillas cuando hay más de una; las referencias son deterministas. Entre los sistemas neuronales, se recomienda \Winner{} por su F1 macro medio de validación. La regresión logística obtiene \LogisticDev\% en validación y \LogisticTest\% en prueba. \BaselineComparison{} Su brecha media entre F1 de entrenamiento y validación es \Gap{} puntos porcentuales. Las métricas de ambos conjuntos se calculan con dropout desactivado sobre el mismo checkpoint, para hacer interpretable la comparación. Las curvas permiten observar convergencia y separación entre entrenamiento y validación.
+
+\begin{table}[t]
+\caption{Resultados en porcentaje. La variación entre semillas no es un intervalo de confianza poblacional.}
+\label{tab:results}\centering\scriptsize
+\input{metrics_table.tex}
+\end{table}
+
+\begin{figure*}[t]
+\centering\includegraphics[width=\textwidth]{learning_curves.pdf}
+\caption{Pérdida y F1 macro de entrenamiento (azul) y validación (rojo discontinuo), por arquitectura y semilla.}
+\label{fig:curves}
+\end{figure*}
+
+Una brecha positiva es compatible con dificultades de generalización; no permite atribuirlas exclusivamente a varianza, pues se evalúan personas distintas. Tampoco una referencia simple estima el error de Bayes: sin referencia óptima no se cuantifica sesgo evitable. Dropout, weight decay y parada temprana son los controles de regularización. El análisis exportado por clase y sujeto permite investigar si una mejora agregada oculta degradación en actividades o personas concretas.
+
+Las confusiones de validación con mayor conteo en la semilla prefijada \RepresentativeSeed{} son: \ErrorSummary{}. Se exportan también ejemplos incorrectos ordenados por confianza y solapamiento de errores entre arquitecturas. Estos ejemplos deben inspeccionarse antes de atribuir causas físicas a los fallos. Las ventanas solapadas de un sujeto están correlacionadas: no deben tratarse como observaciones independientes para inferencias estadísticas.
+
+\section{Conclusiones y limitaciones}
+Entre las arquitecturas neuronales, el protocolo recomienda \Winner{} con F1 macro de prueba \WinnerTest\%, manteniendo la selección en validación. Las diferencias deben interpretarse junto con las referencias, la dispersión entre semillas y el costo de entrenamiento, disponible en las tablas exportadas. El entrenamiento de las repeticiones finales tomó \FinalHours{} horas acumuladas en \Device{}; este valor excluye la búsqueda y la preparación de datos. Una única partición de validación por sujeto y pocas semillas limitan la generalización de las conclusiones. Una evaluación futura puede usar validación cruzada agrupada dentro del entrenamiento oficial, conservando una nueva prueba externa para evitar adaptar decisiones al test ya observado.
+
+\begin{thebibliography}{2}
+\bibitem{har} J. Reyes-Ortiz, D. Anguita, A. Ghio, L. Oneto y X. Parra, ``Human Activity Recognition Using Smartphones,'' UCI Machine Learning Repository, 2013, doi: 10.24432/C54S4K.
+\bibitem{ng} A. Ng, \emph{Machine Learning Yearning}, borrador, 2018, caps. 5--12, 14 y 20--32.
+\end{thebibliography}
+\end{document}
